@@ -18,6 +18,7 @@ enum AppTheme: String, CaseIterable {
 struct AppearanceSettingsTab: View {
     @AppStorage("appTheme") private var appTheme: String = AppTheme.system.rawValue
     @AppStorage(PanelController.animatesPanelDefaultsKey) private var animatesPanel: Bool = true
+    @AppStorage(QuickLookScaleSetting.defaultsKey) private var quickLookScale = QuickLookScaleSetting.defaultValue
     @State private var reducesMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
 
     var body: some View {
@@ -30,6 +31,35 @@ struct AppearanceSettingsTab: View {
             .pickerStyle(.menu)
             .onChange(of: appTheme) { _, newValue in
                 applyTheme(newValue)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Preview Size")
+                    Spacer()
+                    Text("\(Int((quickLookScale * 100).rounded()))%")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    Button("Reset") {
+                        quickLookScale = QuickLookScaleSetting.defaultValue
+                    }
+                    .disabled(quickLookScale == QuickLookScaleSetting.defaultValue)
+                }
+                Slider(
+                    value: $quickLookScale,
+                    in: QuickLookScaleSetting.range,
+                    step: QuickLookScaleSetting.step
+                ) {
+                    EmptyView()
+                } minimumValueLabel: {
+                    Image(systemName: "textformat.size.smaller")
+                } maximumValueLabel: {
+                    Image(systemName: "textformat.size.larger")
+                }
+                .labelsHidden()
+                Text("Scales the text, controls and window of the Quick Look preview. 100% is the default.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
             }
 
             HStack {

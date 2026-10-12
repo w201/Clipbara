@@ -12,6 +12,9 @@ struct ClipboardQuickLookView: View {
     @Environment(AppState.self) private var appState
     @State private var draft = ""
 
+    @AppStorage(QuickLookScaleSetting.defaultsKey) private var storedScale = QuickLookScaleSetting.defaultValue
+    private var scale: CGFloat { QuickLookScaleSetting.clamped(storedScale) }
+
     private var isEditing: Bool { appState.editingClipID == item.id }
     @State private var cachedImage: NSImage?
     @State private var imageMetadata: (width: Int, height: Int)?
@@ -77,9 +80,9 @@ struct ClipboardQuickLookView: View {
     /// Text and other types keep the large fixed bubble. Images get a bubble shaped
     /// like the image at its fitted size, so there is no dead checkerboard around it.
     private func bubbleSize(in size: CGSize) -> CGSize {
-        let maxWidth = min(size.width * 0.72, 1080)
+        let maxWidth = min(size.width * 0.72, 1080 * scale)
         let availableHeight = max(size.height - shelfHeight - 68, 360)
-        let maxHeight = min(max(availableHeight * 0.86, 360), 720)
+        let maxHeight = min(max(availableHeight * 0.86, 360), 720 * scale)
 
         guard item.contentType == .image,
               let image = cachedImage,
@@ -87,15 +90,15 @@ struct ClipboardQuickLookView: View {
             return CGSize(width: maxWidth, height: maxHeight)
         }
 
-        let chrome = Self.toolbarHeight + Self.footerHeight + 2
+        let chrome = (Self.toolbarHeight + Self.footerHeight) * scale + 2
         let margin = ZoomingImageScrollView.fitMargin * 2
         let maxContent = CGSize(width: maxWidth - margin, height: maxHeight - chrome - margin)
         let scale = min(1, maxContent.width / image.size.width, maxContent.height / image.size.height)
         let width = image.size.width * scale + margin
         let height = image.size.height * scale + margin + chrome
         return CGSize(
-            width: min(max(width, Self.minImageBubbleWidth), maxWidth),
-            height: min(max(height, Self.minImageBubbleHeight), maxHeight)
+            width: min(max(width, Self.minImageBubbleWidth * scale), maxWidth),
+            height: min(max(height, Self.minImageBubbleHeight * scale), maxHeight)
         )
     }
 
@@ -123,7 +126,7 @@ struct ClipboardQuickLookView: View {
 
             BubblePointer()
                 .fill(bubblePointerFill)
-                .frame(width: 32, height: 14)
+                .frame(width: 32 * scale, height: 14 * scale)
                 .overlay(
                     BubblePointer()
                         .stroke(borderColor, lineWidth: 0.75)
@@ -140,7 +143,7 @@ struct ClipboardQuickLookView: View {
         return HStack(spacing: 10) {
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 18))
+                    .font(.system(size: 18 * scale))
                     .foregroundStyle(.secondary.opacity(0.75))
             }
             .buttonStyle(.plain)
@@ -148,9 +151,9 @@ struct ClipboardQuickLookView: View {
 
             HStack(spacing: 6) {
                 Image(systemName: item.contentType.systemImage)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 * scale, weight: .semibold))
                 Text(item.userTitle ?? item.contentType.displayName)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13 * scale, weight: .semibold))
                     .lineLimit(1)
             }
             .foregroundStyle(tint)
@@ -159,7 +162,7 @@ struct ClipboardQuickLookView: View {
                 Text("·")
                     .foregroundStyle(.quaternary)
                 Text(appName)
-                    .font(.system(size: 13))
+                    .font(.system(size: 13 * scale))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -173,7 +176,7 @@ struct ClipboardQuickLookView: View {
             if let bundleId = item.sourceAppBundleId {
                 Image(nsImage: AppIconProvider.icon(for: bundleId, size: 24))
                     .resizable()
-                    .frame(width: 24, height: 24)
+                    .frame(width: 24 * scale, height: 24 * scale)
                     .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
             }
 
@@ -185,8 +188,8 @@ struct ClipboardQuickLookView: View {
                     appState.editingClipID = item.id
                 } label: {
                     Image(systemName: "pencil")
-                        .font(.system(size: 13, weight: .medium))
-                        .frame(width: 28, height: 28)
+                        .font(.system(size: 13 * scale, weight: .medium))
+                        .frame(width: 28 * scale, height: 28 * scale)
                         .background(Color.primary.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
                 }
@@ -197,12 +200,12 @@ struct ClipboardQuickLookView: View {
             Button(action: onPaste) {
                 HStack(spacing: 5) {
                     Image(systemName: "doc.on.clipboard")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 11 * scale, weight: .medium))
                     Text("Paste")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 12 * scale, weight: .semibold))
                 }
-                .padding(.horizontal, 12)
-                .frame(height: 28)
+                .padding(.horizontal, 12 * scale)
+                .frame(height: 28 * scale)
                 .background(Color.accentColor.opacity(0.13))
                 .foregroundStyle(Color.accentColor)
                 .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
@@ -210,8 +213,8 @@ struct ClipboardQuickLookView: View {
             .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 16)
-        .frame(height: Self.toolbarHeight)
+        .padding(.horizontal, 16 * scale)
+        .frame(height: Self.toolbarHeight * scale)
     }
 
     private var zoomControls: some View {
@@ -224,8 +227,8 @@ struct ClipboardQuickLookView: View {
                 zoom.toggleFitAndActualSize()
             } label: {
                 Text(zoom.isFitted ? String(localized: "Fit") : "\(Int((zoom.magnification * 100).rounded()))%")
-                    .font(.system(size: 11, weight: .medium).monospacedDigit())
-                    .frame(width: 44, height: 26)
+                    .font(.system(size: 11 * scale, weight: .medium).monospacedDigit())
+                    .frame(width: 44 * scale, height: 26 * scale)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -245,8 +248,8 @@ struct ClipboardQuickLookView: View {
     private func zoomButton(systemImage: String, help: LocalizedStringKey, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 11, weight: .semibold))
-                .frame(width: 26, height: 26)
+                .font(.system(size: 11 * scale, weight: .semibold))
+                .frame(width: 26 * scale, height: 26 * scale)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -276,13 +279,13 @@ struct ClipboardQuickLookView: View {
     private var textContent: some View {
         Group {
             if isEditing {
-                EditableTextView(text: $draft, isMonospaced: cachedIsCodeLike, fontSize: 14, lineSpacing: 5)
+                EditableTextView(text: $draft, isMonospaced: cachedIsCodeLike, fontSize: 14 * scale, lineSpacing: 5 * scale)
             } else {
                 SelectableTextView(
                     text: item.textContent ?? "...",
                     isMonospaced: cachedIsCodeLike,
-                    fontSize: 14,
-                    lineSpacing: 5
+                    fontSize: 14 * scale,
+                    lineSpacing: 5 * scale
                 )
             }
         }
@@ -301,18 +304,18 @@ struct ClipboardQuickLookView: View {
     private var editButtons: some View {
         Button("Cancel") { appState.cancelEdit() }
             .buttonStyle(.plain)
-            .font(.system(size: 12, weight: .medium))
+            .font(.system(size: 12 * scale, weight: .medium))
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 10)
-            .frame(height: 28)
+            .padding(.horizontal, 10 * scale)
+            .frame(height: 28 * scale)
 
         Button {
             appState.saveEdit(item, text: draft)
         } label: {
             Text("Save")
-                .font(.system(size: 12, weight: .semibold))
-                .padding(.horizontal, 14)
-                .frame(height: 28)
+                .font(.system(size: 12 * scale, weight: .semibold))
+                .padding(.horizontal, 14 * scale)
+                .frame(height: 28 * scale)
                 .background(Color.accentColor.opacity(canSave ? 0.9 : 0.25))
                 .foregroundStyle(.white.opacity(canSave ? 1 : 0.5))
                 .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
@@ -347,12 +350,12 @@ struct ClipboardQuickLookView: View {
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(domain)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 20 * scale, weight: .semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
 
                     Text(urlString)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(.system(size: 13 * scale, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .lineLimit(4)
                         .textSelection(.enabled)
@@ -361,7 +364,7 @@ struct ClipboardQuickLookView: View {
 
             Spacer()
         }
-        .padding(22)
+        .padding(22 * scale)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(contentBackground)
     }
@@ -381,19 +384,19 @@ struct ClipboardQuickLookView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color.orange.opacity(0.10))
-                        .frame(width: 64, height: 64)
+                        .frame(width: 64 * scale, height: 64 * scale)
                     Image(nsImage: fileIcon)
                         .resizable()
-                        .frame(width: 46, height: 46)
+                        .frame(width: 46 * scale, height: 46 * scale)
                 }
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(fileName)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 20 * scale, weight: .semibold))
                         .lineLimit(2)
 
                     Text(item.textContent ?? "")
-                        .font(.system(size: 13))
+                        .font(.system(size: 13 * scale))
                         .foregroundStyle(.secondary)
                         .lineLimit(3)
                         .textSelection(.enabled)
@@ -402,7 +405,7 @@ struct ClipboardQuickLookView: View {
 
             Spacer()
         }
-        .padding(22)
+        .padding(22 * scale)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(contentBackground)
     }
@@ -420,10 +423,10 @@ struct ClipboardQuickLookView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Text(item.textContent ?? String(localized: "Color"))
-                .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                .font(.system(size: 18 * scale, weight: .semibold, design: .monospaced))
                 .textSelection(.enabled)
         }
-        .padding(22)
+        .padding(22 * scale)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(contentBackground)
     }
@@ -445,19 +448,19 @@ struct ClipboardQuickLookView: View {
             Text(item.contentType.displayName)
             }
         }
-        .font(.system(size: 12, weight: .medium))
+        .font(.system(size: 12 * scale, weight: .medium))
         .foregroundStyle(.secondary)
-        .padding(.horizontal, 16)
-        .frame(height: Self.footerHeight)
+        .padding(.horizontal, 16 * scale)
+        .frame(height: Self.footerHeight * scale)
     }
 
     private func placeholder(systemImage: String, text: LocalizedStringKey) -> some View {
         VStack(spacing: 8) {
             Image(systemName: systemImage)
-                .font(.system(size: 34))
+                .font(.system(size: 34 * scale))
                 .foregroundStyle(.tertiary)
             Text(text)
-                .font(.system(size: 12))
+                .font(.system(size: 12 * scale))
                 .foregroundStyle(.tertiary)
         }
     }
@@ -466,9 +469,9 @@ struct ClipboardQuickLookView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(tint.opacity(0.12))
-                .frame(width: 64, height: 64)
+                .frame(width: 64 * scale, height: 64 * scale)
             Image(systemName: systemImage)
-                .font(.system(size: 28, weight: .medium))
+                .font(.system(size: 28 * scale, weight: .medium))
                 .foregroundStyle(tint)
         }
     }
