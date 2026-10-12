@@ -27,14 +27,15 @@ struct PinboardGridView: View {
                 )
             } else {
                 GeometryReader { geo in
-                    let cardH = min(max(geo.size.height - 26, 164), 188)
-                    let cardW = min(max(cardH * 1.16, 206), 228)
-                    let rows = [GridItem(.fixed(cardH), spacing: 10)]
+                    let scale = CardScale.factor(forCardAreaHeight: geo.size.height)
+                    let cardW = CardScale.baseCardWidth
+                    let cardH = CardScale.baseCardHeight
+                    let rows = [GridItem(.fixed(cardH * scale), spacing: 10 * scale)]
                     let pinboardItems = orderedEntries.compactMap(\.clipboardItem)
 
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHGrid(rows: rows, spacing: 8) {
+                            LazyHGrid(rows: rows, spacing: 8 * scale) {
                                 ForEach(Array(orderedEntries.enumerated()), id: \.element.id) { index, entry in
                                     if let item = entry.clipboardItem {
                                         cardView(
@@ -42,14 +43,15 @@ struct PinboardGridView: View {
                                             item: item,
                                             index: index,
                                             cardWidth: cardW,
-                                            cardHeight: cardH
+                                            cardHeight: cardH,
+                                            scale: scale
                                         )
                                         .id(entry.id)
                                     }
                                 }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 9)
+                            .padding(.horizontal, 16 * scale)
+                            .padding(.vertical, 9 * scale)
                         }
                         .onChange(of: appState.searchState.selectedIndex) { _, newIndex in
                             if let idx = newIndex, idx < orderedEntries.count {
@@ -83,7 +85,7 @@ struct PinboardGridView: View {
     }
 
     @ViewBuilder
-    private func cardView(entry: PinboardEntry, item: ClipboardItem, index: Int, cardWidth: CGFloat, cardHeight: CGFloat) -> some View {
+    private func cardView(entry: PinboardEntry, item: ClipboardItem, index: Int, cardWidth: CGFloat, cardHeight: CGFloat, scale: CGFloat) -> some View {
         let isDragging = draggingEntry?.id == entry.id
 
         ClipboardCardView(
@@ -109,6 +111,7 @@ struct PinboardGridView: View {
                 takeOut(entry) { appState.moveToPinboard(entry, destination: destination) }
             }
         )
+        .scaledCard(scale)
         .opacity(isDragging ? 0.3 : 1.0)
         .scaleEffect(isDragging ? 0.95 : 1.0)
         .animation(.easeInOut(duration: 0.15), value: isDragging)

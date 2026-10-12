@@ -22,13 +22,14 @@ struct CardGridView: View {
                 )
             } else {
                 GeometryReader { geo in
-                    let cardH = min(max(geo.size.height - 26, 164), 188)
-                    let cardW = min(max(cardH * 1.16, 206), 228)
-                    let rows = [GridItem(.fixed(cardH), spacing: 10)]
+                    let scale = CardScale.factor(forCardAreaHeight: geo.size.height)
+                    let cardW = CardScale.baseCardWidth
+                    let cardH = CardScale.baseCardHeight
+                    let rows = [GridItem(.fixed(cardH * scale), spacing: 10 * scale)]
 
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHGrid(rows: rows, spacing: 8) {
+                            LazyHGrid(rows: rows, spacing: 8 * scale) {
                                 ForEach(filteredItems.indices, id: \.self) { index in
                                     let item = filteredItems[index]
                                     ClipboardCardView(
@@ -48,11 +49,12 @@ struct CardGridView: View {
                                             restoreSelectionAfterDeletingItem(at: index)
                                         }
                                     )
+                                    .scaledCard(scale)
                                     .id(item.id)
                                 }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 9)
+                            .padding(.horizontal, 16 * scale)
+                            .padding(.vertical, 9 * scale)
                         }
                         .onChange(of: appState.searchState.selectedIndex) { _, newIndex in
                             if let idx = newIndex, idx < filteredItems.count {

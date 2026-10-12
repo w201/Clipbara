@@ -47,13 +47,6 @@ final class PanelController {
         return setting && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 
-    private let baseHeight: CGFloat = 280
-    private let minimumPanelWidth: CGFloat = 720
-    private let maximumScreenWidthRatio: CGFloat = 0.90
-    private let estimatedCardWidth: CGFloat = 228
-    private let estimatedCardSpacing: CGFloat = 8
-    private let contentHorizontalPadding: CGFloat = 32
-    private let maximumVisibleCardCount = 6
 
     // MARK: - Screen Selection
 
@@ -822,7 +815,7 @@ final class PanelController {
         panel.contentView = NSHostingView(
             rootView: ClipboardQuickLookView(
                 item: item,
-                shelfHeight: baseHeight,
+                shelfHeight: CardScale.panelHeight(forScreenHeight: screenFrame.height),
                 zoom: zoom,
                 onClose: { [weak self] in
                     self?.hideQuickLook()
@@ -927,27 +920,11 @@ final class PanelController {
     }
 
     private func panelFrame(in screenFrame: NSRect, itemCount: Int, y: CGFloat) -> NSRect {
-        let panelWidth = targetPanelWidth(for: itemCount, screenWidth: screenFrame.width)
-        let panelX = screenFrame.midX - panelWidth / 2
-
-        return NSRect(
-            x: panelX,
+        NSRect(
+            x: screenFrame.minX,
             y: y,
-            width: panelWidth,
-            height: baseHeight
+            width: screenFrame.width,
+            height: CardScale.panelHeight(forScreenHeight: screenFrame.height)
         )
-    }
-
-    private func targetPanelWidth(for itemCount: Int, screenWidth: CGFloat) -> CGFloat {
-        let screenMaxWidth = max(360, screenWidth - 48)
-        let maxWidth = min(screenMaxWidth, max(minimumPanelWidth, screenWidth * maximumScreenWidthRatio))
-        let minWidth = min(minimumPanelWidth, maxWidth)
-        let visibleCardCount = min(max(itemCount, 1), maximumVisibleCardCount)
-        let cardContentWidth =
-            CGFloat(visibleCardCount) * estimatedCardWidth +
-            CGFloat(max(visibleCardCount - 1, 0)) * estimatedCardSpacing +
-            contentHorizontalPadding
-
-        return min(max(minWidth, cardContentWidth), maxWidth)
     }
 }
