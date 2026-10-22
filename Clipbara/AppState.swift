@@ -140,6 +140,11 @@ final class AppState {
         clipQueue.stop()
         clipboardMonitor.skipNextChange()
         pasteService.paste(item: item, asPlainText: asPlainText)
+        // The pasted clip is the active one on the pasteboard now, so it
+        // moves to the front of the history.
+        item.copiedAt = Date()
+        try? modelContainer?.mainContext.save()
+        clipboardMonitor.refreshLatestItems()
         // ⌘V has to reach the app behind the panel, so send it once the
         // panel is off screen and no longer the key window.
         if DirectPaste.isReady {
