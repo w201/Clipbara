@@ -3,13 +3,22 @@
 ## 빌드 & 실행
 
 - xcodegen 사용: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodegen generate`
-- 빌드: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project Clipbara.xcodeproj -scheme Clipbara -configuration Debug build`
+- 빌드: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project Clipbara.xcodeproj -scheme Clipbara -configuration Debug -derivedDataPath build/DerivedData build`
 - **빌드 성공 후 항상 기존 앱 종료 → 재실행까지 자동으로 수행할 것:**
   ```
   pkill -f Clipbara.app || true
   sleep 1
-  open ~/Library/Developer/Xcode/DerivedData/Clipbara-fkhylhcltueskmgbecvzvekxrevf/Build/Products/Debug/Clipbara.app
+  open build/DerivedData/Build/Products/Debug/Clipbara.app
   ```
+
+## Building for /Applications
+
+- **Never copy an Xcode build (Debug/Release `Clipbara.app` from DerivedData) into `/Applications`.** Xcode signs it ad-hoc with hardened runtime, so library validation refuses to load the embedded `Sparkle.framework` and the app crashes at launch (`Library not loaded: @rpath/Sparkle.framework ... different Team IDs`)
+- Build a DMG instead: `bash scripts/build-release.sh` (in ad-hoc mode it signs inside-out without hardened runtime, using the distribution entitlements)
+- If this is not a release, do not commit the `appcast.xml` changes the script makes
+- **After the build, always tell the user:**
+  1. The DMG path (`build/Clipbara-{VERSION}.dmg`) and that they must install it into `/Applications` **themselves** (do not install it for them)
+  2. That after installing they should re-check Clipbara under **System Settings → Privacy & Security → Accessibility** (a changed signature can make macOS ask for the permission again; if pasting stops working, check this first)
 
 ## 릴리스 & 배포
 
